@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Web Socket Player</title>
+</head>
+<body>
+<button id="button">play</button>
+<script language="JavaScript">
+        window.addEventListener('load', init, false);
+        function init() {
+            try {
+                function loadMusic(context, url) {
+                    const socket = new WebSocket(url);
+                    socket.binaryType = "arraybuffer";
+
+                    socket.onopen = function (event) {
+                        console.log("socket open");
+                        sendMessage(socket, new ArrayBuffer([1,2,3,4]));
+                    };
+
+                    socket.onmessage = function (event) {
+                        console.log(`Got Message: ${event.data}`);
+                        context.resume().then(() => {
+                            context.decodeAudioData(event.data, function(buffer) {
+                                playMusic(context, buffer);
+                            }, function () { console.log("error in decoding audio") });
+                        });
+                    };
+                }
+
+                function sendMessage(socket, message) {
+                    console.log("send message: " + message);
+                    socket.send(message);
+                }
+
+                function playMusic(context, buffer) {
+                    var source = context.createBufferSource();
+                    source.buffer = buffer;
+                    source.connect(context.destination);
+                    source.start();
+                }
+
+                document.querySelector('button').addEventListener('click', function() {
+                    window.AudioContext = window.AudioContext || window.webkitAudioContext;
+                    var context = new AudioContext();
+                    loadMusic(context, "ws://localhost:8080/socket");
+                });
+            } catch(e) {
+                console.log(e);
+            }
+        }
+</script>
+</body>
+</html>
